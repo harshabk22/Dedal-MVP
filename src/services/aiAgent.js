@@ -65,43 +65,46 @@ Instructions:
 
   // ================= 1. ATTEMPT GEMINI AI STUDIO =================
   if (activeGeminiKey) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeGeminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: `${systemPrompt}\n\nStudent Query: ${query}` }]
+    const geminiModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    for (const model of geminiModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeGeminiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: 'user',
+                  parts: [{ text: `${systemPrompt}\n\nStudent Query: ${query}` }]
+                }
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 600
               }
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 600
-            }
-          })
-        }
-      );
+            })
+          }
+        );
 
-      if (response.ok) {
-        const data = await response.json();
-        const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (candidateText) {
-          return {
-            text: candidateText,
-            provider: 'Gemini AI Studio',
-            model: 'gemini-2.5-flash',
-            status: 'online'
-          };
+        if (response.ok) {
+          const data = await response.json();
+          const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (candidateText) {
+            return {
+              text: candidateText,
+              provider: 'Gemini AI Studio',
+              model: model,
+              status: 'online'
+            };
+          }
+        } else {
+          console.warn(`Gemini (${model}) failed with status:`, response.status);
         }
-      } else {
-        console.warn('Gemini API call failed with status:', response.status, 'Falling over to OpenRouter...');
+      } catch (err) {
+        console.warn(`Gemini (${model}) network error:`, err);
       }
-    } catch (err) {
-      console.warn('Gemini API network error, falling over to OpenRouter:', err);
     }
   }
 
